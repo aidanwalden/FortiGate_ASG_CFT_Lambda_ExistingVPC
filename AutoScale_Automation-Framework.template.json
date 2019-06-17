@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "(v1.0) AWS CloudFormation Template to deploy an API Gateway and Lambda based FortiGate AutoScaling automation framework",
+	"Description": "(v2.0) AWS CloudFormation Template to deploy an API Gateway and Lambda based FortiGate AutoScaling automation framework",
 	"Mappings": {
 		"RegionMap": {
 			"us-east-1": {
