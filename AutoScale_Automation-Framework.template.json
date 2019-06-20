@@ -147,17 +147,19 @@
 		"CloudWatchEventRule": {
 			"Type": "AWS::Events::Rule",
 			"Properties": {
+				"Name": "autoscale-dev-autoscale.views.start_scheduled",
 				"Description": "CloudWatchEventRule",
 				"ScheduleExpression": "rate(1 minute)",
 				"State": "ENABLED",
 				"Targets": [{
-					"Arn": {
+					"Id": "TargetFunctionV1",
+					"Arn":
+					{
 						"Fn::GetAtt": [
 							"AutoScaleLambda",
 							"Arn"
 						]
 					},
-					"Id": "TargetFunctionV1",
 					"InputTransformer": {
 						"InputPathsMap": {
 							"detail-type": "$.detail-type",
@@ -182,6 +184,7 @@
 				"AutoScaleLambdaPolicy"
 			],
 			"Properties": {
+				"FunctionName": "fortinet-cft-autoscale",
 				"Code": {
 					"S3Bucket": {
 						"Fn::FindInMap": ["RegionMap", {
