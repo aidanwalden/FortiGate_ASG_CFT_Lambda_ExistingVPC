@@ -308,14 +308,6 @@
 		"SNSTopicBYOL": {
 			"Type": "AWS::SNS::Topic",
 			"Properties": {
-				"Subscription": [
-					{
-						"Endpoint": {
-							"Ref": "APIGatewayURL"
-						},
-						"Protocol": "https"
-					}
-				],
 				"TopicName": {
 					"Fn::Join": [
 						"",
@@ -333,17 +325,32 @@
 				}
 			}
 		},
+		"SNSSubscriptionBYOL": {
+			"Type": "AWS::SNS::Subscription",
+			"Properties": {
+				"TopicArn": {
+					"Ref": "SNSTopicBYOL"
+				},
+				"Endpoint": {
+					"Ref": "APIGatewayURL"
+				},
+				"Protocol": "https",
+				"DeliveryPolicy": {
+					"healthyRetryPolicy": {
+                        "numRetries": 14,
+                        "minDelayTarget": 40,
+                        "maxDelayTarget": 40,
+						"numMinDelayRetries": 6,
+                        "numMaxDelayRetries": 6,
+                        "numNoDelayRetries": 0,
+						"backoffFunction": "linear"
+                    }
+				}
+			}
+		},
 		"SNSTopicPAYG": {
 			"Type": "AWS::SNS::Topic",
 			"Properties": {
-				"Subscription": [
-					{
-						"Endpoint": {
-							"Ref": "APIGatewayURL"
-						},
-						"Protocol": "https"
-					}
-				],
 				"TopicName": {
 					"Fn::Join": [
 						"",
@@ -358,6 +365,29 @@
 							"-paygo"
 						]
 					]
+				}
+			}
+		},
+		"SNSSubscriptionPAYG": {
+			"Type": "AWS::SNS::Subscription",
+			"Properties": {
+				"TopicArn": {
+					"Ref": "SNSTopicPAYG"
+				},
+				"Endpoint": {
+					"Ref": "APIGatewayURL"
+				},
+				"Protocol": "https",
+				"DeliveryPolicy": {
+					"healthyRetryPolicy": {
+                        "numRetries": 14,
+                        "minDelayTarget": 40,
+                        "maxDelayTarget": 40,
+						"numMinDelayRetries": 6,
+                        "numMaxDelayRetries": 6,
+                        "numNoDelayRetries": 0,
+						"backoffFunction": "linear"
+                    }
 				}
 			}
 		},
@@ -704,7 +734,7 @@
 					"Ref": "ASGBYOL"
 				},
 				"DefaultResult": "ABANDON",
-				"HeartbeatTimeout": "240",
+				"HeartbeatTimeout": "600",
 				"LifecycleHookName": {
 					"Fn::Join": [
 						"",
@@ -761,7 +791,7 @@
 					"Ref": "ASGBYOL"
 				},
 				"DefaultResult": "ABANDON",
-				"HeartbeatTimeout": "240",
+				"HeartbeatTimeout": "600",
 				"LifecycleHookName": {
 					"Fn::Join": [
 						"",
@@ -793,6 +823,8 @@
 			"Type": "AWS::AutoScaling::AutoScalingGroup",
 			"DependsOn": "SNSTopicBYOL",
 			"Properties": {
+				"HealthCheckType": "ELB",
+				"HealthCheckGracePeriod": 240,
 				"AutoScalingGroupName": {
 					"Fn::Join": [
 						"",
@@ -811,6 +843,20 @@
 				"DesiredCapacity": {
 					"Ref": "ASGBYOLMinSize"
 				},
+				"NotificationConfigurations" :
+				[
+					{
+						"TopicARN" : { "Ref" : "SNSTopicBYOL" },
+						"NotificationTypes" :
+						[
+							"autoscaling:TEST_NOTIFICATION",
+							"autoscaling:EC2_INSTANCE_LAUNCH",
+							"autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+							"autoscaling:EC2_INSTANCE_TERMINATE",
+							"autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+						]
+		  			}
+    			],
 				"LaunchConfigurationName": {
 					"Ref": "LaunchConfigBYOL"
 				},
@@ -927,7 +973,7 @@
 					"Ref": "ASGPAYG"
 				},
 				"DefaultResult": "ABANDON",
-				"HeartbeatTimeout": "240",
+				"HeartbeatTimeout": "600",
 				"LifecycleHookName": {
 					"Fn::Join": [
 						"",
@@ -984,7 +1030,7 @@
 					"Ref": "ASGPAYG"
 				},
 				"DefaultResult": "ABANDON",
-				"HeartbeatTimeout": "240",
+				"HeartbeatTimeout": "600",
 				"LifecycleHookName": {
 					"Fn::Join": [
 						"",
@@ -1031,9 +1077,25 @@
 						]
 					]
 				},
+				"HealthCheckType": "ELB",
+				"HealthCheckGracePeriod": 240,
 				"DesiredCapacity": {
 					"Ref": "ASGPAYGMinSize"
 				},
+				"NotificationConfigurations" :
+				[
+					{
+						"TopicARN" : { "Ref" : "SNSTopicPAYG" },
+						"NotificationTypes" :
+						[
+							"autoscaling:TEST_NOTIFICATION",
+							"autoscaling:EC2_INSTANCE_LAUNCH",
+							"autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
+							"autoscaling:EC2_INSTANCE_TERMINATE",
+							"autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
+						]
+		  			}
+    			],
 				"LaunchConfigurationName": {
 					"Ref": "LaunchConfigPAYG"
 				},
