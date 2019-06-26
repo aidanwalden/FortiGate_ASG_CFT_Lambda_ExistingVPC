@@ -126,7 +126,6 @@
 		},
 		"Password": {
 			"Type": "String",
-			"NoEcho": "true",
 			"Description": "Provide a password for the admin account of the FortiGates"
 		},
 		"InitS3Bucket": {
