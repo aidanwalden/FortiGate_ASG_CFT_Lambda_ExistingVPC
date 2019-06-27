@@ -337,8 +337,8 @@
 				"DeliveryPolicy": {
 					"healthyRetryPolicy": {
                         "numRetries": 14,
-                        "minDelayTarget": 40,
-                        "maxDelayTarget": 40,
+                        "minDelayTarget": 50,
+                        "maxDelayTarget": 50,
 						"numMinDelayRetries": 6,
                         "numMaxDelayRetries": 6,
                         "numNoDelayRetries": 0,
