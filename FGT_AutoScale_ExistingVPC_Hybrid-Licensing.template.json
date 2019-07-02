@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "(v2.0) AWS CloudFormation Template to deploy a hybrid license based FortiGate AutoScaling solution",
+	"Description": "(v3.0) AWS CloudFormation Template to deploy a hybrid license based FortiGate AutoScaling solution",
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
 			"ParameterGroups": [
@@ -23,10 +23,14 @@
 					},
 					"Parameters": [
 						"CIDRForInstanceAccess",
+						"AdminHttpsPort",
 						"KeyPair",
 						"Password",
 						"InitS3Bucket",
-						"ListenerPort",
+						"AlbListnerPort",
+						"AlbTargetGroupPort",
+						"NlbListnerPort",
+						"NlbTargetGroupPort",
 						"APIGatewayURL",
 						"EnvironmentTag"
 					]
@@ -120,6 +124,11 @@
 			"Default": "0.0.0.0/0",
 			"Description": "Provide a network CIDR from which the FortiGate instances will be accessed"
 		},
+		"AdminHttpsPort": {
+			"Type": "String",
+			"Default": "443",
+			"Description": "Provide a port to use for the FortiGate HTTPS GUI"
+		},
 		"KeyPair": {
 			"Type": "AWS::EC2::KeyPair::KeyName",
 			"Description": "Select a keypair to associate with the FortiGates"
@@ -133,10 +142,25 @@
 			"MinLength": "1",
 			"Description": "Provide the Init S3 Bucket name where your license files exists"
 		},
-		"ListenerPort": {
+		"AlbListnerPort": {
 			"Type": "Number",
 			"Default": "80",
-			"Description": "Provide the listener port for the external ELB"
+			"Description": "Provide the HTTP listener port for the external ALB"
+		},
+		"AlbTargetGroupPort": {
+			"Type": "Number",
+			"Default": "8001",
+			"Description": "Provide the HTTP target group port for the external ALB"
+		},
+		"NlbListnerPort": {
+			"Type": "Number",
+			"Default": "514",
+			"Description": "Provide the TCP listener port for the external NLB"
+		},
+		"NlbTargetGroupPort": {
+			"Type": "Number",
+			"Default": "514",
+			"Description": "Provide the TCP target group port for the external NLB"
 		},
 		"APIGatewayURL": {
 			"Type": "String",
@@ -301,9 +325,6 @@
 				]
 			}
 		},
-		"S3Bucket": {
-			"Type": "AWS::S3::Bucket"
-		},
 		"SNSTopicBYOL": {
 			"Type": "AWS::SNS::Topic",
 			"Properties": {
@@ -336,14 +357,14 @@
 				"Protocol": "https",
 				"DeliveryPolicy": {
 					"healthyRetryPolicy": {
-                        "numRetries": 14,
-                        "minDelayTarget": 50,
-                        "maxDelayTarget": 50,
+						"numRetries": 14,
+						"minDelayTarget": 50,
+						"maxDelayTarget": 50,
 						"numMinDelayRetries": 6,
-                        "numMaxDelayRetries": 6,
-                        "numNoDelayRetries": 0,
+						"numMaxDelayRetries": 6,
+						"numNoDelayRetries": 0,
 						"backoffFunction": "linear"
-                    }
+					}
 				}
 			}
 		},
@@ -379,14 +400,14 @@
 				"Protocol": "https",
 				"DeliveryPolicy": {
 					"healthyRetryPolicy": {
-                        "numRetries": 14,
-                        "minDelayTarget": 40,
-                        "maxDelayTarget": 40,
+						"numRetries": 14,
+						"minDelayTarget": 40,
+						"maxDelayTarget": 40,
 						"numMinDelayRetries": 6,
-                        "numMaxDelayRetries": 6,
-                        "numNoDelayRetries": 0,
+						"numMaxDelayRetries": 6,
+						"numNoDelayRetries": 0,
 						"backoffFunction": "linear"
-                    }
+					}
 				}
 			}
 		},
@@ -408,6 +429,17 @@
 						}
 					},
 					{
+						"Description": "Allow lambda access to FGT",
+						"IpProtocol": "tcp",
+						"FromPort": {
+							"Ref": "AdminHttpsPort"
+						},
+						"ToPort": {
+							"Ref": "AdminHttpsPort"
+						},
+						"CidrIp": "0.0.0.0/0"
+					},
+					{
 						"Description": "Allow local VPC access to FGT",
 						"IpProtocol": "-1",
 						"FromPort": "0",
@@ -426,10 +458,14 @@
 				"GroupId": {
 					"Ref": "FGTSecGrpBase"
 				},
-				"Description": "Allow ALBs to send traffic to FGTs",
-				"IpProtocol": "-1",
-				"FromPort": "0",
-				"ToPort": "65535",
+				"Description": "Allow ALBs to send traffic to FGTs on TargetGroup Port",
+				"IpProtocol": "tcp",
+				"FromPort": {
+					"Ref": "AlbTargetGroupPort"
+				},
+				"ToPort": {
+					"Ref": "AlbTargetGroupPort"
+				},
 				"SourceSecurityGroupId": {
 					"Ref": "ALBSecGrp"
 				}
@@ -442,13 +478,13 @@
 				"GroupId": {
 					"Ref": "FGTSecGrpBase"
 				},
-				"Description": "Allow NLBs to send traffic to FGTs on ListenerPort",
+				"Description": "Allow NLBs to send traffic to FGTs on TargetGroup Port",
 				"IpProtocol": "tcp",
 				"FromPort": {
-					"Ref": "ListenerPort"
+					"Ref": "NlbTargetGroupPort"
 				},
 				"ToPort": {
-					"Ref": "ListenerPort"
+					"Ref": "NlbTargetGroupPort"
 				},
 				"CidrIp": "0.0.0.0/0"
 			}
@@ -510,11 +546,13 @@
 					]
 				},
 				"Port": {
-					"Ref": "ListenerPort"
+					"Ref": "NlbTargetGroupPort"
 				},
 				"Protocol": "TCP",
 				"HealthCheckProtocol": "TCP",
-				"HealthCheckPort": "541",
+				"HealthCheckPort": {
+					"Ref": "AdminHttpsPort"
+				},
 				"TargetType": "instance",
 				"VpcId": {
 					"Ref": "VPCID"
@@ -536,7 +574,7 @@
 					"Ref": "ExternalNLB"
 				},
 				"Port": {
-					"Ref": "ListenerPort"
+					"Ref": "NlbListnerPort"
 				},
 				"Protocol": "TCP"
 			}
@@ -624,12 +662,14 @@
 					]
 				},
 				"Port": {
-					"Ref": "ListenerPort"
+					"Ref": "AlbTargetGroupPort"
 				},
 				"Protocol": "HTTP",
 				"HealthCheckProtocol": "HTTPS",
 				"HealthCheckPath": "/login",
-				"HealthCheckPort": "443",
+				"HealthCheckPort": {
+					"Ref": "AdminHttpsPort"
+				},
 				"TargetType": "instance",
 				"VpcId": {
 					"Ref": "VPCID"
@@ -651,7 +691,7 @@
 					"Ref": "ExternalALB"
 				},
 				"Port": {
-					"Ref": "ListenerPort"
+					"Ref": "AlbListnerPort"
 				},
 				"Protocol": "HTTP"
 			}
@@ -710,6 +750,9 @@
 							"\n",
 							[
 								"config system global",
+								{
+									"Fn::Sub": "set admin-sport ${AdminHttpsPort}"
+								},
 								"set pre-login-banner disable",
 								"end",
 								"config system admin",
@@ -840,20 +883,20 @@
 				"DesiredCapacity": {
 					"Ref": "ASGBYOLMinSize"
 				},
-				"NotificationConfigurations" :
-				[
+				"NotificationConfigurations": [
 					{
-						"TopicARN" : { "Ref" : "SNSTopicBYOL" },
-						"NotificationTypes" :
-						[
+						"TopicARN": {
+							"Ref": "SNSTopicBYOL"
+						},
+						"NotificationTypes": [
 							"autoscaling:TEST_NOTIFICATION",
 							"autoscaling:EC2_INSTANCE_LAUNCH",
 							"autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
 							"autoscaling:EC2_INSTANCE_TERMINATE",
 							"autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
 						]
-		  			}
-    			],
+					}
+				],
 				"LaunchConfigurationName": {
 					"Ref": "LaunchConfigBYOL"
 				},
@@ -947,6 +990,10 @@
 							"\n",
 							[
 								"config system global",
+								"config system global",
+								{
+									"Fn::Sub": "set admin-sport ${AdminHttpsPort}"
+								},
 								"set pre-login-banner disable",
 								"end",
 								"config system admin",
@@ -1077,20 +1124,20 @@
 				"DesiredCapacity": {
 					"Ref": "ASGPAYGMinSize"
 				},
-				"NotificationConfigurations" :
-				[
+				"NotificationConfigurations": [
 					{
-						"TopicARN" : { "Ref" : "SNSTopicPAYG" },
-						"NotificationTypes" :
-						[
+						"TopicARN": {
+							"Ref": "SNSTopicPAYG"
+						},
+						"NotificationTypes": [
 							"autoscaling:TEST_NOTIFICATION",
 							"autoscaling:EC2_INSTANCE_LAUNCH",
 							"autoscaling:EC2_INSTANCE_LAUNCH_ERROR",
 							"autoscaling:EC2_INSTANCE_TERMINATE",
 							"autoscaling:EC2_INSTANCE_TERMINATE_ERROR"
 						]
-		  			}
-    			],
+					}
+				],
 				"LaunchConfigurationName": {
 					"Ref": "LaunchConfigPAYG"
 				},
