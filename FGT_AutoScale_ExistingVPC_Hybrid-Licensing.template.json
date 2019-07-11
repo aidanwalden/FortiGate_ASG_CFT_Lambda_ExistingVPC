@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "(v3.0) AWS CloudFormation Template to deploy a hybrid license based FortiGate AutoScaling solution",
+	"Description": "(v3.1) AWS CloudFormation Template to deploy a hybrid license based FortiGate AutoScaling solution",
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
 			"ParameterGroups": [
@@ -25,7 +25,8 @@
 						"CIDRForInstanceAccess",
 						"AdminHttpsPort",
 						"KeyPair",
-						"Password",
+						"InitialPassword",
+						"SsmSecureStringParamName",
 						"InitS3Bucket",
 						"AlbListnerPort",
 						"AlbTargetGroupPort",
@@ -133,9 +134,14 @@
 			"Type": "AWS::EC2::KeyPair::KeyName",
 			"Description": "Select a keypair to associate with the FortiGates"
 		},
-		"Password": {
+		"InitialPassword": {
 			"Type": "String",
 			"Description": "Provide a password for the admin account of the FortiGates"
+		},
+		"SsmSecureStringParamName": {
+			"Type": "String",
+			"Default": "MySsmSecureStringParameter",
+			"Description": "Provide a ARN for a secret in Secrets Manager to use for the admin password of the FortiGates"
 		},
 		"InitS3Bucket": {
 			"Type": "String",
@@ -759,7 +765,7 @@
 								"edit admin",
 								"set force-password-change disable",
 								{
-									"Fn::Sub": "set password ${Password}"
+									"Fn::Sub": "set password ${InitialPassword}"
 								},
 								"next",
 								"end"
@@ -939,6 +945,13 @@
 						"PropagateAtLaunch": "true"
 					},
 					{
+						"Key": "SsmSecureStringParamName",
+						"Value": {
+							"Ref": "SsmSecureStringParamName"
+						},
+						"PropagateAtLaunch": "true"
+					},
+					{
 						"Key": "Name",
 						"Value": {
 							"Fn::Join": [
@@ -1000,7 +1013,7 @@
 								"edit admin",
 								"set force-password-change disable",
 								{
-									"Fn::Sub": "set password ${Password}"
+									"Fn::Sub": "set password ${InitialPassword}"
 								},
 								"next",
 								"end"
@@ -1180,6 +1193,13 @@
 						"PropagateAtLaunch": "true"
 					},
 					{
+						"Key": "SsmSecureStringParamName",
+						"Value": {
+							"Ref": "SsmSecureStringParamName"
+						},
+						"PropagateAtLaunch": "true"
+					},
+					{
 						"Key": "Name",
 						"Value": {
 							"Fn::Join": [
@@ -1283,7 +1303,7 @@
 			"Value": "admin",
 			"Description": "Username for the Fortigates"
 		},
-		"Password": {
+		"InitialPassword": {
 			"Value": "the value provided for the password parameter",
 			"Description": "Initial password for the FortiGates"
 		}
