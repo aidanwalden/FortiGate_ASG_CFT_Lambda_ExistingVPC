@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "(v3.1) AWS CloudFormation Template to deploy a hybrid license based FortiGate AutoScaling solution",
+  "Description": "(v4.0) AWS CloudFormation Template to deploy a hybrid license based FortiGate AutoScaling solution",
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
 			"ParameterGroups": [
@@ -25,9 +25,9 @@
 						"CIDRForInstanceAccess",
 						"AdminHttpsPort",
 						"KeyPair",
-						"InitialPassword",
 						"SsmSecureStringParamName",
 						"InitS3Bucket",
+            			"InternalLBDNSName",
 						"AlbListnerPort",
 						"AlbTargetGroupPort",
 						"NlbListnerPort",
@@ -47,7 +47,6 @@
 						"ASGBYOLMinSize",
 						"ASGBYOLMaxSize",
 						"PAYGInstanceType",
-						"ASGPAYGMinSize",
 						"ASGPAYGMaxSize"
 					]
 				}
@@ -134,10 +133,6 @@
 			"Type": "AWS::EC2::KeyPair::KeyName",
 			"Description": "Select a keypair to associate with the FortiGates"
 		},
-		"InitialPassword": {
-			"Type": "String",
-			"Description": "Provide a password for the admin account of the FortiGates"
-		},
 		"SsmSecureStringParamName": {
 			"Type": "String",
 			"Default": "MySsmSecureStringParameter",
@@ -147,6 +142,11 @@
 			"Type": "String",
 			"MinLength": "1",
 			"Description": "Provide the Init S3 Bucket name where your license files exists"
+		},
+		"InternalLBDNSName": {
+			"Type": "String",
+			"MinLength": "1",
+			"Description": "Provide the DNS Name of the Internal Load Balancer"
 		},
 		"AlbListnerPort": {
 			"Type": "Number",
@@ -202,11 +202,6 @@
 			"Type": "Number",
 			"Default": "2",
 			"Description": "Maximum number of FortiGate instances in the BYOL Auto-Scaling Group."
-		},
-		"ASGPAYGMinSize": {
-			"Type": "Number",
-			"Default": "0",
-			"Description": "Maximum number of FortiGate instances in the PAYG Auto-Scaling Group."
 		},
 		"ASGPAYGMaxSize": {
 			"Type": "Number",
@@ -281,7 +276,7 @@
 	"Conditions": {
 	},
 	"Resources": {
-		"InstanceRole": {
+    "InitLambdaRole": {
 			"Type": "AWS::IAM::Role",
 			"Properties": {
 				"AssumeRolePolicyDocument": {
@@ -291,7 +286,7 @@
 							"Effect": "Allow",
 							"Principal": {
 								"Service": [
-									"ec2.amazonaws.com"
+                  					"lambda.amazonaws.com"
 								]
 							},
 							"Action": [
@@ -303,14 +298,21 @@
 				"Path": "/",
 				"Policies": [
 					{
-						"PolicyName": "ApplicationPolicy",
+            "PolicyName": "SystemsManagerAccess",
 						"PolicyDocument": {
 							"Version": "2012-10-17",
 							"Statement": [
 								{
 									"Effect": "Allow",
 									"Action": [
-										"s3:GetObject"
+										"ssm:GetParameter"
+									  ],
+									  "Resource": "*"
+									},
+									{
+									  "Effect": "Allow",
+									  "Action": [
+										"logs:*"
 									],
 									"Resource": "*"
 								}
@@ -320,16 +322,78 @@
 				]
 			}
 		},
-		"InstanceProfile": {
-			"Type": "AWS::IAM::InstanceProfile",
-			"Properties": {
-				"Path": "/",
-				"Roles": [
-					{
-						"Ref": "InstanceRole"
-					}
+		"InitFunction": {
+		  "Type": "AWS::Lambda::Function",
+		  "DependsOn": "InitLambdaRole",
+				"Properties": {
+			"Code": {
+			  "ZipFile": {
+				"Fn::Join": [
+				  "\n",
+				  [
+					"import boto3",
+					"import cfnresponse",
+					"import json",
+					"import logging",
+					"logger = logging.getLogger()",
+					"logger.setLevel(logging.INFO)",
+					"client = boto3.client('ssm')",
+					"",
+					"def handler(event, context):",
+					"    logger.info('<-- event received: {}'.format(json.dumps(event)))",
+					"",
+					"    try:",
+					"        resp = client.get_parameter(Name=event['ResourceProperties']['SsmSecureStringParamName'], WithDecryption=True)",
+					"    except Exception as error:",
+					"        logger.error('<--!! Exception: {}'.format(error))",
+					"        responseData = {'msg':'error'}",
+					"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+					"        return",
+					"    if resp['ResponseMetadata']['HTTPStatusCode'] == 200:",
+					"        if 'Parameter' in resp:",
+					"            if 'Value' in resp['Parameter']:",
+					"                logger.info('<-- sussessfully accessed secure string value')",
+					"                responseData = {'secret': resp['Parameter']['Value']}",
+					"                cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+					"            else:",
+					"                logger.error('<--!! error accessing the secure string value')",
+					"                responseData = {'msg':'error'}",
+					"                cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+					"    else:",
+					"        logger.error('<--!! error accessing the secure string value')",
+					"        responseData = {'msg':'error'}",
+					"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+					""
+				  ]
 				]
+						}
+			},
+			"Role": {
+			  "Fn::GetAtt": [
+				"InitLambdaRole",
+				"Arn"
+					]
+			},
+			"Timeout": 120,
+			"Handler": "index.handler",
+			"Runtime": "python2.7",
+			"MemorySize": 128
+		  }
+		},
+		"RunInitFunction": {
+		  "Type": "Custom::InitFunction",
+		  "DependsOn": "InitFunction",
+		  "Properties": {
+			"ServiceToken": {
+			  "Fn::GetAtt": [
+				"InitFunction",
+				"Arn"
+			  ]
+			},
+			"SsmSecureStringParamName": {
+			  "Ref": "SsmSecureStringParamName"
 			}
+		  }
 		},
 		"SNSTopicBYOL": {
 			"Type": "AWS::SNS::Topic",
@@ -765,10 +829,31 @@
 								"edit admin",
 								"set force-password-change disable",
 								{
-									"Fn::Sub": "set password ${InitialPassword}"
+								  "Fn::Sub": [
+									"set password ${secret}",
+									{
+									  "secret": {
+										"Fn::GetAtt": [
+										  "RunInitFunction",
+										  "secret"
+										]
+									  }
+									}
+								  ]
 								},
 								"next",
-								"end"
+								"end",
+								"config system interface",
+								"edit port2",
+								"set vdom root",
+								"set mode dhcp",
+								"set role lan",
+								"set defaultgw disable",
+								"set dns-server-override disable",
+								"set mtu-override enable",
+								"set mtu 9001",
+												"next",
+												"end"
 							]
 						]
 					}
@@ -1013,7 +1098,17 @@
 								"edit admin",
 								"set force-password-change disable",
 								{
-									"Fn::Sub": "set password ${InitialPassword}"
+								  "Fn::Sub": [
+									"set password ${secret}",
+									{
+									  "secret": {
+										"Fn::GetAtt": [
+										  "RunInitFunction",
+										  "secret"
+										]
+									  }
+									}
+								  ]
 								},
 								"next",
 								"end"
@@ -1134,9 +1229,7 @@
 						]
 					]
 				},
-				"DesiredCapacity": {
-					"Ref": "ASGPAYGMinSize"
-				},
+        		"DesiredCapacity": "0",
 				"NotificationConfigurations": [
 					{
 						"TopicARN": {
@@ -1157,9 +1250,7 @@
 				"MaxSize": {
 					"Ref": "ASGPAYGMaxSize"
 				},
-				"MinSize": {
-					"Ref": "ASGPAYGMinSize"
-				},
+        		"MinSize": "0",
 				"TerminationPolicies": [
 					"NewestInstance"
 				],
@@ -1304,8 +1395,10 @@
 			"Description": "Username for the Fortigates"
 		},
 		"InitialPassword": {
-			"Value": "the value provided for the password parameter",
-			"Description": "Initial password for the FortiGates"
+      		"Value": {
+        		"Ref": "SsmSecureStringParamName"
+      		},
+      		"Description": "The latest version of this SSM Secure String Parameter"
 		}
 	}
 }
