@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "(v4.0) AWS CloudFormation Template to deploy a hybrid license based FortiGate AutoScaling solution",
+	"Description": "(v4.1) AWS CloudFormation Template to deploy a hybrid license based FortiGate AutoScaling solution",
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
 			"ParameterGroups": [
@@ -27,7 +27,7 @@
 						"KeyPair",
 						"SsmSecureStringParamName",
 						"InitS3Bucket",
-            			"InternalLBDNSName",
+						"InternalLBDNSName",
 						"AlbListnerPort",
 						"AlbTargetGroupPort",
 						"NlbListnerPort",
@@ -141,7 +141,7 @@
 		"InitS3Bucket": {
 			"Type": "String",
 			"MinLength": "1",
-			"Description": "Provide the Init S3 Bucket name where your license files exists"
+			"Description": "Provide the Init S3 Bucket name where your license files exists.  ** AWS best practice is to enable bucket encryption and versioning.**"
 		},
 		"InternalLBDNSName": {
 			"Type": "String",
@@ -276,7 +276,7 @@
 	"Conditions": {
 	},
 	"Resources": {
-    "InitLambdaRole": {
+		"InitLambdaRole": {
 			"Type": "AWS::IAM::Role",
 			"Properties": {
 				"AssumeRolePolicyDocument": {
@@ -286,7 +286,7 @@
 							"Effect": "Allow",
 							"Principal": {
 								"Service": [
-                  					"lambda.amazonaws.com"
+									"lambda.amazonaws.com"
 								]
 							},
 							"Action": [
@@ -298,7 +298,7 @@
 				"Path": "/",
 				"Policies": [
 					{
-            "PolicyName": "SystemsManagerAccess",
+						"PolicyName": "SystemsManagerAccess",
 						"PolicyDocument": {
 							"Version": "2012-10-17",
 							"Statement": [
@@ -306,12 +306,12 @@
 									"Effect": "Allow",
 									"Action": [
 										"ssm:GetParameter"
-									  ],
-									  "Resource": "*"
-									},
-									{
-									  "Effect": "Allow",
-									  "Action": [
+									],
+									"Resource": "*"
+								},
+								{
+									"Effect": "Allow",
+									"Action": [
 										"logs:*"
 									],
 									"Resource": "*"
@@ -323,77 +323,77 @@
 			}
 		},
 		"InitFunction": {
-		  "Type": "AWS::Lambda::Function",
-		  "DependsOn": "InitLambdaRole",
-				"Properties": {
-			"Code": {
-			  "ZipFile": {
-				"Fn::Join": [
-				  "\n",
-				  [
-					"import boto3",
-					"import cfnresponse",
-					"import json",
-					"import logging",
-					"logger = logging.getLogger()",
-					"logger.setLevel(logging.INFO)",
-					"client = boto3.client('ssm')",
-					"",
-					"def handler(event, context):",
-					"    logger.info('<-- event received: {}'.format(json.dumps(event)))",
-					"",
-					"    try:",
-					"        resp = client.get_parameter(Name=event['ResourceProperties']['SsmSecureStringParamName'], WithDecryption=True)",
-					"    except Exception as error:",
-					"        logger.error('<--!! Exception: {}'.format(error))",
-					"        responseData = {'msg':'error'}",
-					"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
-					"        return",
-					"    if resp['ResponseMetadata']['HTTPStatusCode'] == 200:",
-					"        if 'Parameter' in resp:",
-					"            if 'Value' in resp['Parameter']:",
-					"                logger.info('<-- sussessfully accessed secure string value')",
-					"                responseData = {'secret': resp['Parameter']['Value']}",
-					"                cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
-					"            else:",
-					"                logger.error('<--!! error accessing the secure string value')",
-					"                responseData = {'msg':'error'}",
-					"                cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
-					"    else:",
-					"        logger.error('<--!! error accessing the secure string value')",
-					"        responseData = {'msg':'error'}",
-					"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
-					""
-				  ]
-				]
-						}
-			},
-			"Role": {
-			  "Fn::GetAtt": [
-				"InitLambdaRole",
-				"Arn"
+			"Type": "AWS::Lambda::Function",
+			"DependsOn": "InitLambdaRole",
+			"Properties": {
+				"Code": {
+					"ZipFile": {
+						"Fn::Join": [
+							"\n",
+							[
+								"import boto3",
+								"import cfnresponse",
+								"import json",
+								"import logging",
+								"logger = logging.getLogger()",
+								"logger.setLevel(logging.INFO)",
+								"client = boto3.client('ssm')",
+								"",
+								"def handler(event, context):",
+								"    logger.info('<-- event received: {}'.format(json.dumps(event)))",
+								"",
+								"    try:",
+								"        resp = client.get_parameter(Name=event['ResourceProperties']['SsmSecureStringParamName'], WithDecryption=True)",
+								"    except Exception as error:",
+								"        logger.error('<--!! Exception: {}'.format(error))",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								"        return",
+								"    if resp['ResponseMetadata']['HTTPStatusCode'] == 200:",
+								"        if 'Parameter' in resp:",
+								"            if 'Value' in resp['Parameter']:",
+								"                logger.info('<-- sussessfully accessed secure string value')",
+								"                responseData = {'secret': resp['Parameter']['Value']}",
+								"                cfnresponse.send(event, context, cfnresponse.SUCCESS, responseData)",
+								"            else:",
+								"                logger.error('<--!! error accessing the secure string value')",
+								"                responseData = {'msg':'error'}",
+								"                cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								"    else:",
+								"        logger.error('<--!! error accessing the secure string value')",
+								"        responseData = {'msg':'error'}",
+								"        cfnresponse.send(event, context, cfnresponse.FAILED, responseData)",
+								""
+							]
+						]
+					}
+				},
+				"Role": {
+					"Fn::GetAtt": [
+						"InitLambdaRole",
+						"Arn"
 					]
-			},
-			"Timeout": 120,
-			"Handler": "index.handler",
-			"Runtime": "python2.7",
-			"MemorySize": 128
-		  }
+				},
+				"Timeout": 120,
+				"Handler": "index.handler",
+				"Runtime": "python2.7",
+				"MemorySize": 128
+			}
 		},
 		"RunInitFunction": {
-		  "Type": "Custom::InitFunction",
-		  "DependsOn": "InitFunction",
-		  "Properties": {
-			"ServiceToken": {
-			  "Fn::GetAtt": [
-				"InitFunction",
-				"Arn"
-			  ]
-			},
-			"SsmSecureStringParamName": {
-			  "Ref": "SsmSecureStringParamName"
+			"Type": "Custom::InitFunction",
+			"DependsOn": "InitFunction",
+			"Properties": {
+				"ServiceToken": {
+					"Fn::GetAtt": [
+						"InitFunction",
+						"Arn"
+					]
+				},
+				"SsmSecureStringParamName": {
+					"Ref": "SsmSecureStringParamName"
+				}
 			}
-		  }
 		},
 		"SNSTopicBYOL": {
 			"Type": "AWS::SNS::Topic",
@@ -829,17 +829,17 @@
 								"edit admin",
 								"set force-password-change disable",
 								{
-								  "Fn::Sub": [
-									"set password ${secret}",
-									{
-									  "secret": {
-										"Fn::GetAtt": [
-										  "RunInitFunction",
-										  "secret"
-										]
-									  }
-									}
-								  ]
+									"Fn::Sub": [
+										"set password ${secret}",
+										{
+											"secret": {
+												"Fn::GetAtt": [
+													"RunInitFunction",
+													"secret"
+												]
+											}
+										}
+									]
 								},
 								"next",
 								"end",
@@ -852,8 +852,8 @@
 								"set dns-server-override disable",
 								"set mtu-override enable",
 								"set mtu 9001",
-												"next",
-												"end"
+								"next",
+								"end"
 							]
 						]
 					}
@@ -1098,17 +1098,17 @@
 								"edit admin",
 								"set force-password-change disable",
 								{
-								  "Fn::Sub": [
-									"set password ${secret}",
-									{
-									  "secret": {
-										"Fn::GetAtt": [
-										  "RunInitFunction",
-										  "secret"
-										]
-									  }
-									}
-								  ]
+									"Fn::Sub": [
+										"set password ${secret}",
+										{
+											"secret": {
+												"Fn::GetAtt": [
+													"RunInitFunction",
+													"secret"
+												]
+											}
+										}
+									]
 								},
 								"next",
 								"end"
@@ -1229,7 +1229,7 @@
 						]
 					]
 				},
-        		"DesiredCapacity": "0",
+				"DesiredCapacity": "0",
 				"NotificationConfigurations": [
 					{
 						"TopicARN": {
@@ -1250,7 +1250,7 @@
 				"MaxSize": {
 					"Ref": "ASGPAYGMaxSize"
 				},
-        		"MinSize": "0",
+				"MinSize": "0",
 				"TerminationPolicies": [
 					"NewestInstance"
 				],
@@ -1395,10 +1395,10 @@
 			"Description": "Username for the Fortigates"
 		},
 		"InitialPassword": {
-      		"Value": {
-        		"Ref": "SsmSecureStringParamName"
-      		},
-      		"Description": "The latest version of this SSM Secure String Parameter"
+			"Value": {
+				"Ref": "SsmSecureStringParamName"
+			},
+			"Description": "The latest version of this SSM Secure String Parameter"
 		}
 	}
 }
