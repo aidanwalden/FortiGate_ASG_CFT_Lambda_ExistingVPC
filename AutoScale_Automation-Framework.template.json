@@ -431,6 +431,7 @@
 								"autoscaling:DescribeAutoScalingInstances",
 								"autoscaling:DescribeAutoScalingGroups",
 								"autoscaling:CompleteLifecycleAction",
+								"ssm:GetParameter",
 								"route53:*",
 								"iam:*",
 								"apigateway:*",

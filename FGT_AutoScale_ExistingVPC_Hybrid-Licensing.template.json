@@ -852,8 +852,35 @@
 								"set dns-server-override disable",
 								"set mtu-override enable",
 								"set mtu 9001",
-												"next",
-												"end"
+								"next",
+								"end",
+								"config firewall address",
+    							"edit internal_load_balancer",
+								{
+									"Fn::Sub": "set type fqdn ${InternalLBDNSName}"
+								},
+        						"set associated-interface port2",
+    							"next",
+								"end",
+								"config firewall vip",
+								"edit internal_lb_vip",
+								"set type fqdn",
+								"set mapped-addr internal_load_balancer",
+								"set extintf port2",
+								"next",
+								"end",
+								"config firewall policy",
+								"edit 0",
+								"set name lb_vip",
+								"set srcintf port1",
+								"set dstintf port2",
+								"set srcaddr all",
+								"set dstaddr internal_lb_vip",
+								"set action accept",
+								"set schedule always",
+								"set service HTTPS",
+								"next",
+								"end"
 							]
 						]
 					}
