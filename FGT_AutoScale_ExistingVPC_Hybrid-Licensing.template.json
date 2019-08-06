@@ -856,8 +856,9 @@
 								"end",
 								"config firewall address",
     							"edit internal_load_balancer",
+								"set type fqdn",
 								{
-									"Fn::Sub": "set type fqdn ${InternalLBDNSName}"
+									"Fn::Sub": "set fqdn ${InternalLBDNSName}"
 								},
         						"set associated-interface port2",
     							"next",
@@ -866,7 +867,10 @@
 								"edit internal_lb_vip",
 								"set type fqdn",
 								"set mapped-addr internal_load_balancer",
-								"set extintf port2",
+								"set extintf port1",
+								"set portforward enable",
+								"set extport 8001",
+								"set mappedport 443",
 								"next",
 								"end",
 								"config firewall policy",
@@ -878,7 +882,8 @@
 								"set dstaddr internal_lb_vip",
 								"set action accept",
 								"set schedule always",
-								"set service HTTPS",
+								"set service ALL",
+								"set fsso disable",
 								"next",
 								"end"
 							]
@@ -1115,7 +1120,6 @@
 							"\n",
 							[
 								"config system global",
-								"config system global",
 								{
 									"Fn::Sub": "set admin-sport ${AdminHttpsPort}"
 								},
@@ -1137,6 +1141,49 @@
 										}
 									]
 								},
+								"next",
+								"end",
+								"config system interface",
+								"edit port2",
+								"set vdom root",
+								"set mode dhcp",
+								"set role lan",
+								"set defaultgw disable",
+								"set dns-server-override disable",
+								"set mtu-override enable",
+								"set mtu 9001",
+								"next",
+								"end",
+								"config firewall address",
+    							"edit internal_load_balancer",
+								"set type fqdn",
+								{
+									"Fn::Sub": "set fqdn ${InternalLBDNSName}"
+								},
+        						"set associated-interface port2",
+    							"next",
+								"end",
+								"config firewall vip",
+								"edit internal_lb_vip",
+								"set type fqdn",
+								"set mapped-addr internal_load_balancer",
+								"set extintf port1",
+								"set portforward enable",
+								"set extport 8001",
+								"set mappedport 443",
+								"next",
+								"end",
+								"config firewall policy",
+								"edit 0",
+								"set name lb_vip",
+								"set srcintf port1",
+								"set dstintf port2",
+								"set srcaddr all",
+								"set dstaddr internal_lb_vip",
+								"set action accept",
+								"set schedule always",
+								"set service ALL",
+								"set fsso disable",
 								"next",
 								"end"
 							]
