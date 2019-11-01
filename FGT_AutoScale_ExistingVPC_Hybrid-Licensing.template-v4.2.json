@@ -1,6 +1,6 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Description": "(v4.1) AWS CloudFormation Template to deploy a hybrid license based FortiGate AutoScaling solution",
+	"Description": "(v4.2) AWS CloudFormation Template to deploy a hybrid license based FortiGate AutoScaling solution",
 	"Metadata": {
 		"AWS::CloudFormation::Interface": {
 			"ParameterGroups": [
@@ -135,8 +135,7 @@
 		},
 		"SsmSecureStringParamName": {
 			"Type": "String",
-			"Default": "MySsmSecureStringParameter",
-			"Description": "Provide a ARN for a secret in Secrets Manager to use for the admin password of the FortiGates"
+			"Description": "Provide a name for an existing secure string parameter from the Systems Manager Parameter Store to use as the admin password of the FortiGates"
 		},
 		"InitS3Bucket": {
 			"Type": "String",
@@ -855,13 +854,13 @@
 								"next",
 								"end",
 								"config firewall address",
-    							"edit internal_load_balancer",
+								"edit internal_load_balancer",
 								"set type fqdn",
 								{
 									"Fn::Sub": "set fqdn ${InternalLBDNSName}"
 								},
-        						"set associated-interface port2",
-    							"next",
+								"set associated-interface port2",
+								"next",
 								"end",
 								"config firewall vip",
 								"edit internal_lb_vip",
@@ -1156,13 +1155,13 @@
 								"next",
 								"end",
 								"config firewall address",
-    							"edit internal_load_balancer",
+								"edit internal_load_balancer",
 								"set type fqdn",
 								{
 									"Fn::Sub": "set fqdn ${InternalLBDNSName}"
 								},
-        						"set associated-interface port2",
-    							"next",
+								"set associated-interface port2",
+								"next",
 								"end",
 								"config firewall vip",
 								"edit internal_lb_vip",
