@@ -14,7 +14,9 @@
 						"PublicSubnet1",
 						"PrivateSubnet1",
 						"PublicSubnet2",
-						"PrivateSubnet2"
+						"PrivateSubnet2",
+						"PublicSubnet3",
+						"PrivateSubnet3"
 					]
 				},
 				{
@@ -78,6 +80,14 @@
 		"PrivateSubnet2": {
 			"Type": "AWS::EC2::Subnet::Id",
 			"Description": "Select the subnet to use for PrivateSubnet2"
+		},
+		"PublicSubnet3": {
+			"Type": "AWS::EC2::Subnet::Id",
+			"Description": "Select the subnet to use for PublicSubnet3"
+		},
+		"PrivateSubnet3": {
+			"Type": "AWS::EC2::Subnet::Id",
+			"Description": "Select the subnet to use for PrivateSubnet3"
 		},
 		"BYOLInstanceType": {
 			"Type": "String",
@@ -580,6 +590,9 @@
 					},
 					{
 						"Ref": "PublicSubnet2"
+					},
+					{
+						"Ref": "PublicSubnet3"
 					}
 				],
 				"Type": "network",
@@ -691,6 +704,9 @@
 					},
 					{
 						"Ref": "PublicSubnet2"
+					},
+					{
+						"Ref": "PublicSubnet3"
 					}
 				],
 				"SecurityGroups": [
@@ -934,6 +950,13 @@
 							":",
 							{
 								"Ref": "PrivateSubnet2"
+							},
+							{
+								"Ref": "PublicSubnet3"
+							},
+							":",
+							{
+								"Ref": "PrivateSubnet3"
 							}
 						]
 					]
@@ -1235,6 +1258,14 @@
 							":",
 							{
 								"Ref": "PrivateSubnet2"
+							},
+							":",
+							{
+								"Ref": "PublicSubnet3"
+							},
+							":",
+							{
+								"Ref": "PrivateSubnet3"
 							}
 						]
 					]
@@ -1304,8 +1335,8 @@
 						]
 					]
 				},
-				"HealthCheckGracePeriod" : 300,
 				"DesiredCapacity": "0",
+				"HealthCheckGracePeriod" : 300,
 				"NotificationConfigurations": [
 					{
 						"TopicARN": {
@@ -1344,6 +1375,9 @@
 					},
 					{
 						"Ref": "PublicSubnet2"
+					},
+					{
+						"Ref": "PublicSubnet3"
 					}
 				],
 				"Tags": [
