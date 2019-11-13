@@ -254,7 +254,7 @@
 							"LambdaCode"
 						]
 					},
-					"S3Key": "autoscale-dev-v1.0.zip"
+					"S3Key": "autoscale-dev.zip"
 				},
 				"Role": {
 					"Fn::GetAtt": [

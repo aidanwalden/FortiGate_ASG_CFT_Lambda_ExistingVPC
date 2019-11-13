@@ -1062,6 +1062,20 @@
 						"PropagateAtLaunch": "true"
 					},
 					{
+						"Key": "Fortigate-Admin-Sport",
+						"Value": {
+							"Ref": "AdminHttpsPort"
+						},
+						"PropagateAtLaunch": "false"
+					},
+					{
+						"Key": "Fortigate-AutoScale-Group-MinSize",
+						"Value": {
+							"Ref": "ASGBYOLMinSize"
+						},
+						"PropagateAtLaunch": "false"
+					},
+					{
 						"Key": "SsmSecureStringParamName",
 						"Value": {
 							"Ref": "SsmSecureStringParamName"
@@ -1357,6 +1371,18 @@
 						"Key": "Fortigate-License",
 						"Value": "paygo",
 						"PropagateAtLaunch": "true"
+					},
+					{
+						"Key": "Fortigate-Admin-Sport",
+						"Value": {
+							"Ref": "AdminHttpsPort"
+						},
+						"PropagateAtLaunch": "false"
+					},
+					{
+						"Key": "Fortigate-AutoScale-Group-MinSize",
+						"Value": "0",
+						"PropagateAtLaunch": "false"
 					},
 					{
 						"Key": "SsmSecureStringParamName",
